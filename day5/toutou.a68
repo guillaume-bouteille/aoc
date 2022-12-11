@@ -1,34 +1,42 @@
 COMMENT
 To launch, run
 sed 's/move//' input_2.txt | sed 's/from//' | sed 's/to//' > input_2_fixed.txt
+sed 's/move//' input.txt | sed 's/from//' | sed 's/to//' > input_fixed.txt
 a68g toutou.a68
+
+I know it is a bit triché, mais comment vous dire... jpp !!!
 
 COMMENT
 
 MODE CRATE = [1:100] CHAR;
 MODE CRATES = REF FLEX [] CRATE;
-MODE CRATES_LEN = REF FLEX [] INT;
 
 MODE INSTRUCTION = [1:3] INT;
 MODE INSTRUCTION_LIST = REF FLEX [] INSTRUCTION;
 
 MODE ALL_SIZES = STRUCT (INT nb_max_crates, INT nb_crate_lines, INT nb_instructions);
 
-#
-PROC pretty print line = (ITEM pline) VOID:
-    print((whole(pline[1], 0),"|",whole(pline[2],0),"|",whole(pline[3],0),"|",whole(pline[4],0),new line));
 
-PROC pretty print inputs = (INPUT_TYPE inputs) VOID:
+PROC pretty print crates = (CRATES crates) VOID:
 BEGIN
-    INT count := 1;
-    WHILE count < UPB inputs
+    print(("----------", new line));
+    FOR i FROM 1 TO 5 # Limited to first 5 elements #
     DO
-        pretty print line(inputs[count]);
-        count := count + 1
+        FOR j FROM 1 TO UPB crates
+        DO
+            print((crates[j][i]))
+        OD;
+        print((new line))
     OD
 END;
-#
 
+
+#
+Read the input file to extract the sizes that will be useful for further parsing:
+ - The number of lines for crates
+ - The number of crates column
+ - The number of instructions
+#
 PROC get all sizes = ( STRING file name ) ALL_SIZES:
 BEGIN
     ALL_SIZES sizes := (0,0,0);
@@ -63,7 +71,10 @@ BEGIN
     sizes := (count, UPB line % 4, nb_instructions)
 END;
 
-PROC parse inputs = ( STRING file name, CRATES crates, CRATES_LEN crates_len, INSTRUCTION_LIST instr ) VOID:
+#
+Parse input file to populate crates and instr object
+#
+PROC parse inputs = ( STRING file name, CRATES crates, INSTRUCTION_LIST instr ) VOID:
 BEGIN
 
     IF FILE file;
@@ -72,7 +83,6 @@ BEGIN
         ALL_SIZES all_sizes := get all sizes( file name );
 
         crates := LOC FLEX[1 : nb_crate_lines OF all_sizes] CRATE;
-        crates_len := LOC FLEX[1 : nb_crate_lines OF all_sizes] INT;
         instr := LOC FLEX[1 : nb_instructions OF all_sizes] INSTRUCTION;
         
         # Set all crates to space char #
@@ -121,42 +131,113 @@ BEGIN
 END;
 
 #
-PROC exo one = ( INPUT_TYPE inputs ) INT:
-BEGIN
-    INT count := 0;
-    FOR i FROM 1 TO UPB inputs
-    DO
-        IF ((inputs[i][1] >= inputs[i][3]) AND (inputs[i][2] <= inputs[i][4])) OR ((inputs[i][1] <= inputs[i][3]) AND (inputs[i][2] >= inputs[i][4])) THEN
-            count := count + 1
-        FI
-    OD;
-    count
-END;
-    
-PROC exo two = ( INPUT_TYPE inputs ) INT:
-BEGIN
-    INT count := 0;
-    FOR i FROM 1 TO UPB inputs
-    DO
-        IF ((inputs[i][1] >= inputs[i][3]) AND (inputs[i][1] <= inputs[i][4])) OR ((inputs[i][1] <= inputs[i][3]) AND (inputs[i][3] <= inputs[i][2])) THEN
-            count := count + 1
-        FI
-    OD;
-    count
-END;
+Move a single crate from a column to another
 #
+PROC move crate = (CRATES crates, INT source, INT destination) VOID:
+BEGIN
+    INT last_crate_src := 0;
+    INT last_crate_dst := 0;
+    INT count := 0;
+    WHILE last_crate_src = 0 OR last_crate_dst = 0
+    DO
+        count := count + 1;
+        IF last_crate_src = 0 AND crates[source][count] = " " THEN
+            last_crate_src := count
+        FI;
+        IF last_crate_dst = 0 AND crates[destination][count] = " " THEN
+            last_crate_dst := count
+        FI
+    OD;
+    
+    crates[destination][last_crate_dst] := crates[source][last_crate_src-1];
+    crates[source][last_crate_src-1] := " "
+END;
+
+#
+Move a multiple crates from a column to another, all at once
+#
+PROC move multiple crates = (CRATES crates, INSTRUCTION instr) VOID:
+BEGIN
+    INT nb_crates := instr[1];
+    INT source := instr[2];
+    INT destination := instr[3];
+    INT last_crate_src := 0;
+    INT last_crate_dst := 0;
+    INT count := 0;
+    WHILE last_crate_src = 0 OR last_crate_dst = 0
+    DO
+        count := count + 1;
+        IF last_crate_src = 0 AND crates[source][count] = " " THEN
+            last_crate_src := count
+        FI;
+        IF last_crate_dst = 0 AND crates[destination][count] = " " THEN
+            last_crate_dst := count
+        FI
+    OD;
+    
+    FOR i FROM 0 TO nb_crates-1
+    DO
+        crates[destination][last_crate_dst+i] := crates[source][last_crate_src-nb_crates+i];
+        crates[source][last_crate_src-nb_crates+i] := " "
+    OD
+END;
+
+#
+Get the solution, i.e the last crate of each column, concatenated in a string
+#
+PROC get soluce = ( CRATES crates) STRING:
+BEGIN
+    STRING s := LOC FLEX[1 : UPB crates] CHAR;
+    FOR j FROM 1 TO UPB crates
+    DO
+        s[j] := " ";
+        BOOL continue := TRUE;
+        INT count := 1;
+        WHILE continue
+        DO
+            IF crates[j][count] = " " THEN
+                continue := FALSE;
+                s[j] := crates[j][count-1]
+            ELSE
+                count := count + 1
+            FI
+        OD
+    OD;
+    s
+END;
+
+
+PROC exo one = ( CRATES crates, INSTRUCTION_LIST instr) STRING:
+BEGIN
+    FOR i FROM 1 TO UPB instr
+    DO
+        FOR j FROM 1 TO instr[i][1]
+        DO
+            move crate(crates, instr[i][2], instr[i][3])
+        OD
+    OD;
+    get soluce(crates)
+END;
+
+PROC exo two = ( CRATES crates, INSTRUCTION_LIST instr) STRING:
+BEGIN
+    FOR i FROM 1 TO UPB instr
+    DO
+        #pretty print crates(crates);#
+        move multiple crates(crates, instr[i])
+    OD;
+    get soluce(crates)
+END;
+
 
 CRATES crates := LOC FLEX [1 : 0] CRATE;
-CRATES_LEN crates_len := LOC FLEX [1 : 0] INT;
 INSTRUCTION_LIST instr := LOC FLEX [1 : 0] INSTRUCTION;
 
-parse inputs( "input_2_fixed.txt", crates, crates_len, instr )
+parse inputs( "input_fixed.txt", crates, instr );
+STRING answ1 := exo one(crates, instr );
+print(("The first answer is ", answ1, new line));
 
-#pretty print inputs(inputs);#
-#
-INT answ1 := exo one(inputs);
-print(("The first answer is ", whole(answ1,0), new line));
+parse inputs( "input_fixed.txt", crates, instr );
+STRING answ2 := exo two(crates, instr );
+print(("The second answer is ", answ2, new line))
 
-INT answ2 := exo two(inputs);
-print(("The second answer is ", whole(answ2,0), new line))
-#
