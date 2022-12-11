@@ -1,0 +1,107 @@
+COMMENT
+To launch, run
+sed 's/[-,]/ /g' input_day4.txt > input_day4_fixed.txt && a68g titi.a68
+
+I know, it is cheating... Meh!
+COMMENT
+
+MODE ITEM = [1:4] INT;
+MODE INPUT_TYPE = REF FLEX [] ITEM;
+
+PROC pretty print line = (ITEM pline) VOID:
+    print((whole(pline[1], 0),"|",whole(pline[2],0),"|",whole(pline[3],0),"|",whole(pline[4],0),new line));
+
+PROC pretty print inputs = (INPUT_TYPE inputs) VOID:
+BEGIN
+    INT count := 1;
+    WHILE count < UPB inputs
+    DO
+        pretty print line(inputs[count]);
+        count := count + 1
+    OD
+END;
+
+PROC get number of lines = ( STRING file name ) INT:
+BEGIN
+    FILE file;
+    open( file, file name, stand in channel );
+    BOOL continue := TRUE;
+    INT count := 0;
+    WHILE continue
+    DO
+        get(file, new line);
+        count := count + 1;
+        IF end of file(file) = TRUE THEN
+            continue := FALSE
+        FI
+    OD;
+    close( file );
+    count
+END;
+
+PROC parse inputs = ( STRING file name, INPUT_TYPE inputs ) VOID:
+BEGIN
+
+    IF FILE file;
+        open( file, file name, stand in channel ) = 0
+    THEN
+        INT nb_lines := get number of lines( file name );
+        inputs := LOC FLEX[1 : nb_lines] ITEM;
+        BOOL continue := TRUE;
+        INT count := 1;
+        WHILE continue
+        DO
+            ITEM it := (0,0,0,0);
+            get(file, it[1]);
+            get(file, it[2]);
+            get(file, it[3]);
+            get(file, it[4]);
+            inputs[count] := it;
+            count := count + 1;
+            IF end of file(file) = TRUE THEN
+                continue := FALSE
+            FI
+        OD;
+        close( file )
+    ELSE
+        print(("Cannot open file", file name, new line) )
+    FI;
+    inputs
+END;
+
+PROC exo one = ( INPUT_TYPE inputs ) INT:
+BEGIN
+    INT count := 0;
+    FOR i FROM 1 TO UPB inputs
+    DO
+        IF ((inputs[i][1] >= inputs[i][3]) AND (inputs[i][2] <= inputs[i][4])) OR ((inputs[i][1] <= inputs[i][3]) AND (inputs[i][2] >= inputs[i][4])) THEN
+            count := count + 1
+        FI
+    OD;
+    count
+END;
+    
+PROC exo two = ( INPUT_TYPE inputs ) INT:
+BEGIN
+    INT count := 0;
+    FOR i FROM 1 TO UPB inputs
+    DO
+        IF ((inputs[i][1] >= inputs[i][3]) AND (inputs[i][1] <= inputs[i][4])) OR ((inputs[i][1] <= inputs[i][3]) AND (inputs[i][3] <= inputs[i][2])) THEN
+            count := count + 1
+        FI
+    OD;
+    count
+END;
+
+
+INPUT_TYPE inputs := LOC FLEX [1 : 0] ITEM;
+
+parse inputs( "input_day4_fixed.txt", inputs );
+
+#pretty print inputs(inputs);#
+
+INT answ1 := exo one(inputs);
+print(("The first answer is ", whole(answ1,0), new line));
+
+INT answ2 := exo two(inputs);
+print(("The second answer is ", whole(answ2,0), new line))
