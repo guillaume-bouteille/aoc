@@ -51,7 +51,7 @@ fn main() {
             sum += game.index;
         }
     }
-    println!("Result P1 is {}", sum);
+    println!("P1={}", sum);
     let mut sum_2 : u32 = 0;
     for game in &games {
         let max_red = game.turns.iter().map(|t| t.red).max().unwrap_or(0);
@@ -59,5 +59,5 @@ fn main() {
         let max_blue = game.turns.iter().map(|t| t.blue).max().unwrap_or(0);
         sum_2 += max_red * max_green * max_blue;
     }
-    println!("Result P2 is {}", sum_2);
+    println!("P2={}", sum_2);
 }
