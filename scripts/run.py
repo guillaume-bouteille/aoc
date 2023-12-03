@@ -173,6 +173,10 @@ if __name__ == "__main__":
 
     # Comment / Uncomment lines to skip exos or not
     exos = [
+        Exo(root_dir, year=2022, day=1),
+        Exo(root_dir, year=2022, day=2),
+        Exo(root_dir, year=2022, day=3),
+        Exo(root_dir, year=2022, day=4),
         Exo(root_dir, year=2023, day=1),
         Exo(root_dir, year=2023, day=2),
         Exo(root_dir, year=2023, day=3),
