@@ -99,10 +99,8 @@ fn main() {
         }
     }
     println!("P1={}", p1_seeds.iter().min().expect("kikoo"));
+
     let mut p2_seed_ranges : Vec<(usize,usize)> = seeds.chunks(2).map(|it| (it[0], it[1])).collect();
-    //for (s, l) in &p2_seed_ranges {
-        //eprintln!("{} -> {}", s, s+l);
-    //}
     for conv in conversions {
         let mut new_ranges : Vec<(usize, usize)> = Vec::new();
         for (start, length) in p2_seed_ranges {
@@ -110,10 +108,6 @@ fn main() {
                 get_new_id_for_range(start, length, &conv));
         }
         p2_seed_ranges = new_ranges;
-        //eprintln!("-------------------");
-        //for (s, l) in &p2_seed_ranges {
-            //eprintln!("{} -> {}", s, s+l);
-        //}
     }
     println!("P2={}", p2_seed_ranges.iter().map(|(start,_)| start).min().expect("ohla"));
 
