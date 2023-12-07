@@ -184,6 +184,7 @@ if __name__ == "__main__":
         Exo(root_dir, year=2023, day=4),
         Exo(root_dir, year=2023, day=5),
         Exo(root_dir, year=2023, day=6),
+        Exo(root_dir, year=2023, day=7),
     ]
     res = []
 
