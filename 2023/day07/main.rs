@@ -50,20 +50,23 @@ const FIVE_OF_A_KIND : i32 = 6;
 
 fn get_hand_type_p2(rh: &Vec<char>) -> i32 {
     let nb_j = rh.iter().filter(|card| **card == 'J').count();
-    if (nb_j == 5) || (nb_j == 4) {
-        return FIVE_OF_A_KIND;
+    let best_without_j = get_hand_type(
+        &rh.clone().into_iter().filter(|card| *card != 'J').collect::<Vec<char>>());
+    match (nb_j, best_without_j) {
+        (5|4, _) => FIVE_OF_A_KIND,
+        (3, ONE_PAIR) => FIVE_OF_A_KIND,
+        (3, HIGH_CARD) => FOUR_OF_A_KIND,
+        (2, THREE_OF_A_KIND) => FIVE_OF_A_KIND,
+        (2, ONE_PAIR) => FOUR_OF_A_KIND,
+        (2, HIGH_CARD) => THREE_OF_A_KIND,
+        (1, FOUR_OF_A_KIND) => FIVE_OF_A_KIND,
+        (1, THREE_OF_A_KIND) => FOUR_OF_A_KIND,
+        (1, TWO_PAIRS) => FULL_HOUSE,
+        (1, ONE_PAIR) => THREE_OF_A_KIND,
+        (1, HIGH_CARD) => ONE_PAIR,
+        (_, _) => best_without_j
+
     }
-    let mut best = get_hand_type(rh);
-    let mut rh_clone = rh.clone();
-    for (i,c) in rh.iter().enumerate() {
-        if *c == 'J' {
-            for t in vec!['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'Q', 'K', 'A'] {
-                rh_clone[i] = t;
-                best = std::cmp::max(best, get_hand_type_p2(&rh_clone));
-            }
-        }
-    }
-    best
 }
 
 fn get_hand_type(rh: &Vec<char>) -> i32 {
