@@ -1,6 +1,7 @@
 
 
 use std::io;
+use std::collections::HashSet;
 
 type PipeMap = Vec<Vec<char>>;
 type Position = (usize, usize);
@@ -9,6 +10,8 @@ type Position = (usize, usize);
 #[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Clone)]
+#[derive(Hash)]
+#[derive(Eq)]
 enum OffsetPosition {
     Middle = 0,
     Left = 1,
@@ -100,20 +103,22 @@ fn compute_next_pipe(pipe_map: &PipeMap, current_position: Position, next_positi
 
 type ElephantPos = ((i64, i64), OffsetPosition);
 
-fn can_escape(pipe_map: &PipeMap, start_position: ElephantPos) -> (bool,Vec<ElephantPos>) {
+// Returns the list of visited position if elephant cannot escape or None if it can escape
+fn search_escape(pipe_map: &PipeMap, start_position: ElephantPos) -> Option<HashSet<ElephantPos>> {
 
-    let mut visited_pos : Vec<ElephantPos> = Vec::new();
+    let mut visited_positions : HashSet<ElephantPos> = HashSet::new();
     let mut next_positions : Vec<ElephantPos> = Vec::new();
     next_positions.push(start_position);
 
+
     while next_positions.len() > 0 {
         let np = next_positions.remove(0);
-        if visited_pos.contains(&np) == true {
+        if visited_positions.contains(&np) == true {
             continue;
         }
 
         if np.0.0 < 0 || np.0.0 >= pipe_map.len() as i64 || np.0.1 < 0 || np.0.1 >= pipe_map[0].len() as i64 {
-            return (true,visited_pos); // We escaped!!!
+            return None; // We escaped!!!
         }
 
         let mut candidates : Vec<ElephantPos> = Vec::new();
@@ -220,19 +225,18 @@ fn can_escape(pipe_map: &PipeMap, start_position: ElephantPos) -> (bool,Vec<Elep
 
 
         for c in candidates {
-            if visited_pos.contains(&c) == false {
+            if visited_positions.contains(&c) == false {
                 next_positions.push(c);
             }
         }
-        visited_pos.push(np);
+        visited_positions.insert(np);
     }
-    (false,visited_pos) // No escape!!!
+    Some(visited_positions) // No escape !!!
 }
 
 fn main() {
 
     let (pipe_map, start_pos, start_pipes) = parse_inputs();
-
 
     let mut current_position = start_pos;
     let mut next_position = start_pipes.0;
@@ -245,20 +249,12 @@ fn main() {
     }
     println!("P1={}", (count_p1+1)/2);
 
-    let mut ground_tiles = Vec::new();
-    for (j,v) in pipe_map.iter().enumerate() {
-        for (i,c) in v.iter().enumerate() {
-            if *c == '.' {
-                ground_tiles.push((j,i));
-            }
-        }
-    }
-    let mut vis : Vec<ElephantPos> = Vec::new();
+    let mut vis : HashSet<ElephantPos> = HashSet::new();
     for init in vec![OffsetPosition::Left, OffsetPosition::Right, OffsetPosition::Down, OffsetPosition::Up] {
-        let (can_escape_b, vis_b) = can_escape(
+        let vis_opt = search_escape(
             &pipe_map, (((start_pos.0 as i64), (start_pos.1 as i64)), init));
-        if can_escape_b == false {
-            vis = vis_b;
+        if let Some(vis_yes) = vis_opt {
+            vis = vis_yes;
             break;
         }
     }
