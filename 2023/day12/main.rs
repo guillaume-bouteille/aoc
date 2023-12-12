@@ -1,9 +1,12 @@
 
 
 use std::io;
+use std::cmp;
+use std::collections::HashMap;
 
 type Line = (Vec<char>, Vec<i64>);
 type Inputs = Vec<Line>;
+type Cache = HashMap<(Vec<char>,Vec<i64>), i64>;
 
 fn parse_inputs() -> (Inputs,Inputs) {
     let mut v1 = Vec::new();
@@ -30,87 +33,76 @@ fn parse_inputs() -> (Inputs,Inputs) {
     (v1,v2)
 }
 
-fn is_valid_solution(map: &Vec<char>, defective_groups: &Vec<i64>, end_lookup : usize) -> bool {
+fn visit_possibilities_v2(map: &Vec<char>, defective_groups: &Vec<i64>, start_idx: usize, cache: &mut Cache) -> i64 {
 
-    let mut nb_curr : i64 = 0;
-    let mut defective_groups_idx = 0;
-    assert!(defective_groups.len()>0);
-    for (i,c) in map.iter().enumerate() {
-        if i >= end_lookup {
-            return true;
-        }
-        if *c == '#' {
-            nb_curr += 1;
-        } else {
-            if nb_curr > 0 {
-                if defective_groups_idx >= defective_groups.len() {
-                    return false;
-                }
-                if defective_groups[defective_groups_idx] != nb_curr {
-                    return false;
-                }
-                defective_groups_idx += 1;
+    if defective_groups.len() == 0 {
+        for idx in start_idx..map.len() {
+            if map[idx] == '#' {
+                return 0;
             }
-            nb_curr = 0;
         }
+        return 1;
     }
-    if nb_curr > 0 {
-        if defective_groups_idx >= defective_groups.len() {
-            return false;
-        }
-        if defective_groups[defective_groups_idx] != nb_curr {
-            return false;
-        }
-    }
-    true
-}
 
-fn visit_possibilities(map: &Vec<char>, defective_groups: &Vec<i64>, nb_choices : i64, unknown_positions: &Vec<usize>) -> i64 {
+    let sl : Vec<char> = map.get(start_idx..).expect("tutu").into_iter()
+        .map(|c| *c).collect::<Vec<char>>();
+    if let Some(sol) = cache.get(&(sl.clone(),defective_groups.clone())) {
+        return *sol;
+    }
+
+    let mut s_min : usize = start_idx;
+    loop {
+        if s_min >= map.len() {
+            return 0;
+        }
+        if map[s_min] != '.' {
+            break;
+        }
+        s_min += 1;
+    }
+
+    let next_group_size = defective_groups[0] as usize;
+    let mut new_defective_groups : Vec<i64> = defective_groups.clone();
+    new_defective_groups.remove(0);
+
+    let space_occupied: i64 = defective_groups.iter().sum::<i64>()
+        + (defective_groups.len() as i64) - 1;
+
+    let mut s_max : usize = cmp::min(
+        map.len()-1,
+        cmp::max(0, (map.len() as i64)-space_occupied) as usize);
+
+    let first_defect = map.iter().enumerate().find(|(i,c)| *i>=start_idx && **c =='#');
+    if let Some(fd) = first_defect {
+        s_max = cmp::min(s_max, fd.0);
+    }
 
     let mut sum : i64 = 0;
-
-    if unknown_positions.len() > 0 {
-
-        if nb_choices > 0 {
-            let mut nmap = map.clone();
-            let mut nup = unknown_positions.clone();
-            let idx = nup.remove(0);
-            nmap[idx] = '#';
-            // only go down if still valid at this point
-            if is_valid_solution(&nmap, defective_groups, idx) {
-                sum += visit_possibilities(&nmap, defective_groups, nb_choices-1, &nup);
+    for s in s_min..s_max+1 {
+        let mut is_good = true;
+        for i in 0..next_group_size {
+            if map[s+i] == '.' {
+                is_good = false;
             }
         }
-        let mut nmap = map.clone();
-        let mut nup = unknown_positions.clone();
-        let idx = nup.remove(0);
-        nmap[idx] = '.';
-        // only go down if still valid at this point
-        if is_valid_solution(&nmap, defective_groups, idx) {
-            sum += visit_possibilities(&nmap, defective_groups, nb_choices, &nup);
+        if !(s+next_group_size == map.len() || map[s+next_group_size] != '#') {
+            is_good = false;
         }
-    } else {
-        if nb_choices == 0 {
-            let iv = is_valid_solution(map, defective_groups, map.len());
-            //eprintln!("--- {:?} is {}", map, iv);
-            if iv {
-                sum = 1;
-            }
+        if is_good {
+            let new_start_index = s+(next_group_size+1) as usize;
+            sum += visit_possibilities_v2(map, &new_defective_groups, new_start_index, cache);
         }
     }
+
+    cache.insert((sl,defective_groups.clone()), sum);
 
     sum
 }
 
 fn compute_nb_possibilities(map: &Vec<char>, defective_groups: &Vec<i64>) -> i64 {
 
-    let nb_defective : i64 = defective_groups.iter().sum();
-    let nb_known_defectives : i64 = map.iter().filter(|c| **c == '#').count() as i64;
-
-    let unknown_positions = map.iter().enumerate().filter(|(_,c)| **c == '?')
-        .map(|(i,_)| i).collect::<Vec<usize>>();
-
-    visit_possibilities(map, defective_groups, nb_defective-nb_known_defectives, &unknown_positions)
+    let mut cache : Cache = HashMap::new();
+    visit_possibilities_v2(map, defective_groups, 0, &mut cache)
 }
 
 fn main() {
@@ -122,9 +114,7 @@ fn main() {
     for l in inputs_p1 {
         p1 += compute_nb_possibilities(&l.0, &l.1);
     }
-
     for l in inputs_p2 {
-        //eprintln!("{:?} {:?}", l.0, l.1);
         p2 += compute_nb_possibilities(&l.0, &l.1);
     }
     println!("P1={}", p1);
