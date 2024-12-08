@@ -32,7 +32,7 @@ fn compute_antinodes_nb(inputs : Inputs, range : Vec<i64>) -> i64 {
     }
 
     let mut antinodes : HashSet<(i64, i64)> = HashSet::new();
-    for (c, antennas) in h {
+    for (_, antennas) in h {
         let num_antennas = antennas.len();
         for x in 0..num_antennas {
             for y in 0..num_antennas {
